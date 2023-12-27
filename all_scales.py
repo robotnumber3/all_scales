@@ -22,7 +22,9 @@ The string is matched against the first column of the DataFrame.
 import pandas as pd
 import streamlit as st
 import numpy as np
-import pyaudio
+import io
+from pydub import AudioSegment
+
 
 
 # Hide the menu and github logo from being displayed
@@ -155,31 +157,33 @@ def generate_sine_wave(freq, duration, sample_rate=44100, amplitude=0.3, fade_du
 
 
 
+
+# ----------------------- PYAUDIO version of play_notes - this also failed to work -----------------
 # Function to play a sequence of notes
-def play_notes(sequence, duration, root_freq, sample_rate=44100):
-    p = pyaudio.PyAudio()
-    stream = p.open(format=pyaudio.paInt16, channels=1, rate=sample_rate, output=True)
-    # Frequencies of notes in a chromatic scale up to two octaves
-    chromatic_scale = [root_freq * 2**(n/12) for n in range(25)]  # 25 notes for two octaves
-    current_note = 0  # Start at the root note
-    # Play the root note
-    note = generate_sine_wave(chromatic_scale[current_note], duration, sample_rate)
-    stream.write(note.tobytes())
-    # Generate and play each note in the sequence
-    for step in sequence:
-        current_note += int(step)
-        freq = chromatic_scale[current_note % len(chromatic_scale)]
-        note = generate_sine_wave(freq, duration, sample_rate)
-        stream.write(note.tobytes())
-    # Reverse the sequence and the direction of each step for the descent
-    for step in reversed(sequence):
-        current_note -= int(step)
-        freq = chromatic_scale[current_note % len(chromatic_scale)]
-        note = generate_sine_wave(freq, duration, sample_rate)
-        stream.write(note.tobytes())
-    stream.stop_stream()
-    stream.close()
-    p.terminate()
+# def play_notes(sequence, duration, root_freq, sample_rate=44100):
+#     p = pyaudio.PyAudio()
+#     stream = p.open(format=pyaudio.paInt16, channels=1, rate=sample_rate, output=True)
+#     # Frequencies of notes in a chromatic scale up to two octaves
+#     chromatic_scale = [root_freq * 2**(n/12) for n in range(25)]  # 25 notes for two octaves
+#     current_note = 0  # Start at the root note
+#     # Play the root note
+#     note = generate_sine_wave(chromatic_scale[current_note], duration, sample_rate)
+#     stream.write(note.tobytes())
+#     # Generate and play each note in the sequence
+#     for step in sequence:
+#         current_note += int(step)
+#         freq = chromatic_scale[current_note % len(chromatic_scale)]
+#         note = generate_sine_wave(freq, duration, sample_rate)
+#         stream.write(note.tobytes())
+#     # Reverse the sequence and the direction of each step for the descent
+#     for step in reversed(sequence):
+#         current_note -= int(step)
+#         freq = chromatic_scale[current_note % len(chromatic_scale)]
+#         note = generate_sine_wave(freq, duration, sample_rate)
+#         stream.write(note.tobytes())
+#     stream.stop_stream()
+#     stream.close()
+#     p.terminate()
 
 
 # -----------------------------------------------------------------------------------------
@@ -191,10 +195,47 @@ def play_notes(sequence, duration, root_freq, sample_rate=44100):
 
 
 
+# --------------- play_audio version using pydub and io
 
+# In this version, we generate the audio data in the server environment and then send it
+# to the client’s web browser to be played.
+# Correct, when you use the st.audio function to play audio data in Streamlit, 
+# the audio data is sent to the client’s web browser and played there. No audio files 
+# are downloaded to the user’s computer. The audio data is streamed from the server 
+# and played in the browser, and it does not remain on the user’s computer after the page is closed. 
+# This makes it a good solution for playing audio in a web app without needing to download 
+# any files to the user’s computer.
 
+import io
+from pydub import AudioSegment
 
+def play_notes(sequence, duration, root_freq, sample_rate=44100):
+    # Frequencies of notes in a chromatic scale up to two octaves
+    chromatic_scale = [root_freq * 2**(n/12) for n in range(25)]  # 25 notes for two octaves
+    current_note = 0  # Start at the root note
+    # Play the root note
+    note = generate_sine_wave(chromatic_scale[current_note], duration, sample_rate)
+    notes = note.tobytes()
+    # Generate each note in the sequence
+    for step in sequence:
+        current_note += int(step)
+        freq = chromatic_scale[current_note % len(chromatic_scale)]
+        note = generate_sine_wave(freq, duration, sample_rate)
+        notes += note.tobytes()
+    # Reverse the sequence and the direction of each step for the descent
+    for step in reversed(sequence):
+        current_note -= int(step)
+        freq = chromatic_scale[current_note % len(chromatic_scale)]
+        note = generate_sine_wave(freq, duration, sample_rate)
+        notes += note.tobytes()
+    # Convert raw data to WAV
+    audio_segment = AudioSegment(notes, frame_rate=sample_rate, sample_width=2, channels=1)
+    # Convert WAV to MP3
+    mp3_io = io.BytesIO()
+    audio_segment.export(mp3_io, format="mp3")
+    return mp3_io.getvalue()
 
+# -------------------------------------------------------------------------------------------------
 
 
 
@@ -463,7 +504,12 @@ if button1:
                         scale_to_play = cur_scale + cur_scale
                         start_pitch = START_PITCH / 2
                         
-                    play_notes(scale_to_play, note_duration, start_pitch)
+                    # This was the "old" method using simpleaudio and pyaudio (which didn't work)
+                    # play_notes(scale_to_play, note_duration, start_pitch)
+                        
+                    # This is the new method to try, using pydub and io
+                    audio_data = play_notes(scale_to_play, note_duration, start_pitch)
+                    st.audio(audio_data, format='audio/mp3')
                    
             else:
                 st.write('The string does not exist in the data.')
