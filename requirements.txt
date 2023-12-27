@@ -1,4 +1,4 @@
 pandas
 streamlit
-simpleaudio
 numpy
+pyaudio
