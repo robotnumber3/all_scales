@@ -21,8 +21,9 @@ The string is matched against the first column of the DataFrame.
 '''
 import pandas as pd
 import streamlit as st
-import simpleaudio as sa
+#import simpleaudio as sa
 import numpy as np
+import pyaudio
 
 
 # Hide the menu and github logo from being displayed
@@ -83,7 +84,63 @@ st.markdown("""
 
 
 
+# -------------- ORIG FUNCTIONS USING SIMPLEAUDIO LIBRARY --------------------------------
 
+# Function to generate a sine wave of a specific frequency
+# def generate_sine_wave(freq, duration, sample_rate=44100, amplitude=0.3, fade_duration=0.01):
+#     t = np.linspace(0, duration, int(sample_rate * duration), False)
+#     note = amplitude * np.sin(freq * t * 2 * np.pi)
+#     # Apply fade-in and fade-out
+#     fade_samples = int(fade_duration * sample_rate)
+#     fade_in = np.linspace(0, 1, fade_samples)
+#     fade_out = np.linspace(1, 0, fade_samples)
+#     note[:fade_samples] *= fade_in
+#     note[-fade_samples:] *= fade_out
+#     return (note * 32767).astype(np.int16)
+
+
+
+
+
+# Function to play a sequence of notes
+# def play_notes(sequence, duration, root_freq, sample_rate=SAMPLE_RATE):
+#     # Frequencies of notes in a chromatic scale up to two octaves
+#     chromatic_scale = [root_freq * 2**(n/12) for n in range(25)]  # 25 notes for two octaves
+#     current_note = 0  # Start at the root note
+#     # Play the root note
+#     note = generate_sine_wave(chromatic_scale[current_note], duration, sample_rate)
+#     play_obj = sa.play_buffer(note, 1, 2, sample_rate)
+#     play_obj.wait_done()
+#     # Generate and play each note in the sequence
+#     for step in sequence:
+#         current_note += int(step)
+#         freq = chromatic_scale[current_note % len(chromatic_scale)]
+#         note = generate_sine_wave(freq, duration, sample_rate)
+#         play_obj = sa.play_buffer(note, 1, 2, sample_rate)
+#         play_obj.wait_done()
+#     # Reverse the sequence and the direction of each step for the descent
+#     for step in reversed(sequence):
+#         current_note -= int(step)
+#         freq = chromatic_scale[current_note % len(chromatic_scale)]
+#         note = generate_sine_wave(freq, duration, sample_rate)
+#         play_obj = sa.play_buffer(note, 1, 2, sample_rate)
+#         play_obj.wait_done()
+
+
+# --------------------------------------------------------------------------------------------
+        
+
+
+
+
+
+
+
+
+# -------------- REPLACEMENT FUNCTIONS USING PYAUDIO LIBRARY --------------------------------
+
+import pyaudio
+import numpy as np
 
 # Function to generate a sine wave of a specific frequency
 def generate_sine_wave(freq, duration, sample_rate=44100, amplitude=0.3, fade_duration=0.01):
@@ -99,31 +156,58 @@ def generate_sine_wave(freq, duration, sample_rate=44100, amplitude=0.3, fade_du
 
 
 
-
-
 # Function to play a sequence of notes
-def play_notes(sequence, duration, root_freq, sample_rate=SAMPLE_RATE):
+def play_notes(sequence, duration, root_freq, sample_rate=44100):
+    p = pyaudio.PyAudio()
+    stream = p.open(format=pyaudio.paInt16, channels=1, rate=sample_rate, output=True)
     # Frequencies of notes in a chromatic scale up to two octaves
     chromatic_scale = [root_freq * 2**(n/12) for n in range(25)]  # 25 notes for two octaves
     current_note = 0  # Start at the root note
     # Play the root note
     note = generate_sine_wave(chromatic_scale[current_note], duration, sample_rate)
-    play_obj = sa.play_buffer(note, 1, 2, sample_rate)
-    play_obj.wait_done()
+    stream.write(note.tobytes())
     # Generate and play each note in the sequence
     for step in sequence:
         current_note += int(step)
         freq = chromatic_scale[current_note % len(chromatic_scale)]
         note = generate_sine_wave(freq, duration, sample_rate)
-        play_obj = sa.play_buffer(note, 1, 2, sample_rate)
-        play_obj.wait_done()
+        stream.write(note.tobytes())
     # Reverse the sequence and the direction of each step for the descent
     for step in reversed(sequence):
         current_note -= int(step)
         freq = chromatic_scale[current_note % len(chromatic_scale)]
         note = generate_sine_wave(freq, duration, sample_rate)
-        play_obj = sa.play_buffer(note, 1, 2, sample_rate)
-        play_obj.wait_done()
+        stream.write(note.tobytes())
+    stream.stop_stream()
+    stream.close()
+    p.terminate()
+
+
+# -----------------------------------------------------------------------------------------
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
 
 
 
