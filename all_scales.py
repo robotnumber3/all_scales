@@ -206,8 +206,6 @@ def generate_sine_wave(freq, duration, sample_rate=44100, amplitude=0.3, fade_du
 # This makes it a good solution for playing audio in a web app without needing to download 
 # any files to the user’s computer.
 
-import io
-from pydub import AudioSegment
 
 def play_notes(sequence, duration, root_freq, sample_rate=44100):
     # Frequencies of notes in a chromatic scale up to two octaves
