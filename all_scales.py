@@ -24,7 +24,7 @@ import streamlit as st
 import numpy as np
 import io
 from pydub import AudioSegment
-
+AudioSegment.converter = "/opt/homebrew/bin/ffmpeg"
 
 
 # Hide the menu and github logo from being displayed
