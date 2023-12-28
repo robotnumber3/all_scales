@@ -228,10 +228,11 @@ def play_notes(sequence, duration, root_freq, sample_rate=44100):
         notes += note.tobytes()
     # Convert raw data to WAV
     audio_segment = AudioSegment(notes, frame_rate=sample_rate, sample_width=2, channels=1)
-    # Convert WAV to MP3
-    mp3_io = io.BytesIO()
-    audio_segment.export(mp3_io, format="mp3")
-    return mp3_io.getvalue()
+    # Convert WAV to WAV
+    wav_io = io.BytesIO()
+    audio_segment.export(wav_io, format="wav")
+    return wav_io.getvalue()
+
 
 # -------------------------------------------------------------------------------------------------
 
@@ -507,7 +508,8 @@ if button1:
                         
                     # This is the new method to try, using pydub and io
                     audio_data = play_notes(scale_to_play, note_duration, start_pitch)
-                    st.audio(audio_data, format='audio/mp3')
+                    st.audio(audio_data, format='audio/wav')
+
                    
             else:
                 st.write('The string does not exist in the data.')
